@@ -263,7 +263,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActivitiesByDateRange(startDate: Date, endDate: Date): Promise<ActivityItem[]> {
-    const walks = await db
+    const walkData = await db
       .select()
       .from(walks)
       .leftJoin(users, eq(walks.userId, users.id))
@@ -287,7 +287,7 @@ export class DatabaseStorage implements IStorage {
 
     // Process similar to getRecentActivity
     const walksMap = new Map<string, ActivityItem>();
-    walks.forEach(row => {
+    walkData.forEach((row: any) => {
       const walk = row.walks;
       const user = row.users!;
       const event = row.walk_events;

@@ -1,0 +1,32 @@
+{
+  "name": "PawTracker - Family Dog Activity Logger",
+  "short_name": "PawTracker",
+  "description": "Track your dog's activities together - walks, bathroom breaks, and feeding times as a family",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#7CB342",
+  "theme_color": "#7CB342",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTIgMTJjMi40ODMgMCA0LjUtMi4wMTcgNC41LTQuNVM0LjQ4MyAzIDE2IDNzLTIuMDE3IDQuNS00LjUgNC41LTQuNS0yLjAxNy00LjUtNC41IDIuMDE3LTQuNSA0LjUtNC41eiIgZmlsbD0iIzdDQjM0MiIvPgo8cGF0aCBkPSJNMTIgMTJjMi43NjIgMCA1IDIuMjM4IDUgNXMtMi4yMzggNS01IDUtNS0yLjIzOC01LTUgMi4yMzgtNSA1LTV6IiBmaWxsPSIjNUE5QzIzIi8+CjxjaXJjbGUgY3g9IjYiIGN5PSI2IiByPSIyIiBmaWxsPSIjNUE5QzIzIi8+CjxjaXJjbGUgY3g9IjE4IiBjeT0iNiIgcj0iMiIgZmlsbD0iIzVBOUMyMyIvPgo8Y2lyY2xlIGN4PSI0IiBjeT0iMTQiIHI9IjEuNSIgZmlsbD0iIzVBOUMyMyIvPgo8Y2lyY2xlIGN4PSIyMCIgY3k9IjE0IiByPSIxLjUiIGZpbGw9IiM1QTlDMjMiLz4KPC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTIgMTJjMi40ODMgMCA0LjUtMi4wMTcgNC41LTQuNVM0LjQ4MyAzIDE2IDNzLTIuMDE3IDQuNS00LjUgNC41LTQuNS0yLjAxNy00LjUtNC41IDIuMDE3LTQuNSA0LjUtNC41eiIgZmlsbD0iIzdDQjM0MiIvPgo8cGF0aCBkPSJNMTIgMTJjMi43NjIgMCA1IDIuMjM4IDUgNXMtMi4yMzggNS01IDUtNS0yLjIzOC01LTUgMi4yMzgtNSA1LTV6IiBmaWxsPSIjNUE5QzIzIi8+CjxjaXJjbGUgY3g9IjYiIGN5PSI2IiByPSIyIiBmaWxsPSIjNUE5QzIzIi8+CjxjaXJjbGUgY3g9IjE4IiBjeT0iNiIgcj0iMiIgZmlsbD0iIzVBOUMyMyIvPgo8Y2lyY2xlIGN4PSI0IiBjeT0iMTQiIHI9IjEuNSIgZmlsbD0iIzVBOUMyMyIvPgo8Y2lyY2xlIGN4PSIyMCIgY3k9IjE0IiByPSIxLjUiIGZpbGw9IiM1QTlDMjMiLz4KPC9zdmc+",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["lifestyle", "productivity"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzc1IiBoZWlnaHQ9IjgxMiIgdmlld0JveD0iMCAwIDM3NSA4MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzNzUiIGhlaWdodD0iODEyIiBmaWxsPSIjRjNGNEY2Ii8+CjxyZWN0IHg9IjIwIiB5PSI2MCIgd2lkdGg9IjMzNSIgaGVpZ2h0PSIyMDAiIHJ4PSIyMCIgZmlsbD0id2hpdGUiLz4KPHR4dCB4PSIxODcuNSIgeT0iMTQwIiBmaWxsPSIjMzc0MTUxIiBmb250LXNpemU9IjI0IiBmb250LWZhbWlseT0iSW50ZXIsIHNhbnMtc2VyaWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPldlbGNvbWUgdG8gUGF3VHJhY2tlcjwvdHh0Pgo8L3N2Zz4=",
+      "sizes": "375x812",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ]
+}

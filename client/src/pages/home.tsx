@@ -179,7 +179,7 @@ export default function Home() {
         <div className="px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className={`w-10 h-10 ${getUserColor(user.id)} rounded-full flex items-center justify-center`}>
+              <div className={`w-10 h-10 ${getUserColor((user as any).id)} rounded-full flex items-center justify-center`}>
                 <span className="text-white font-semibold" data-testid="text-user-initial">
                   {getUserInitial(user)}
                 </span>

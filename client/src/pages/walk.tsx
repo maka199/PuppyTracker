@@ -97,7 +97,7 @@ export default function Walk() {
       if (!activeWalk) throw new Error("No active walk");
       const duration = Math.floor(walkTimer / 60); // Convert to minutes
       await apiRequest("PUT", `/api/walks/${activeWalk.id}`, {
-        endTime: new Date().toISOString(),
+        endTime: new Date(),
         duration,
         isCompleted: true,
       });
