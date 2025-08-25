@@ -44,6 +44,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = req.body;
       
+      // Convert endTime string to Date if present
+      if (updates.endTime) {
+        updates.endTime = new Date(updates.endTime);
+      }
+      
       const walk = await storage.updateWalk(id, updates);
       res.json(walk);
     } catch (error) {
