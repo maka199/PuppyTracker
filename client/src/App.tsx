@@ -8,6 +8,7 @@ import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import Walk from "@/pages/walk";
 import Activity from "@/pages/activity";
+import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/walk" component={Walk} />
           <Route path="/activity" component={Activity} />
+          <Route path="/profile" component={Profile} />
         </>
       )}
       <Route component={NotFound} />

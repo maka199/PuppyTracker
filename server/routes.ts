@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertWalkSchema, insertWalkEventSchema, insertFeedingSchema } from "@shared/schema";
+import { insertWalkSchema, insertWalkEventSchema, insertFeedingSchema, insertDogSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -155,6 +155,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching activity by range:", error);
       res.status(500).json({ message: "Failed to fetch activity" });
+    }
+  });
+
+  // Dog profile routes
+  app.get('/api/dogs/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const dog = await storage.getUserDog(userId);
+      res.json(dog);
+    } catch (error) {
+      console.error("Error fetching dog profile:", error);
+      res.status(500).json({ message: "Failed to fetch dog profile" });
+    }
+  });
+
+  app.post('/api/dogs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const dogData = insertDogSchema.parse({
+        ...req.body,
+        userId,
+      });
+      
+      const dog = await storage.createDog(dogData);
+      res.json(dog);
+    } catch (error) {
+      console.error("Error creating dog:", error);
+      res.status(400).json({ message: "Failed to create dog" });
+    }
+  });
+
+  app.put('/api/dogs/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // Verify the dog belongs to the current user
+      const existingDog = await storage.getDog(id);
+      if (!existingDog) {
+        return res.status(404).json({ message: "Dog not found" });
+      }
+      
+      const userId = req.user.claims.sub;
+      if (existingDog.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const dog = await storage.updateDog(id, updates);
+      res.json(dog);
+    } catch (error) {
+      console.error("Error updating dog:", error);
+      res.status(400).json({ message: "Failed to update dog" });
     }
   });
 

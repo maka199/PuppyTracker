@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import BottomNav from "@/components/bottom-nav";
 import FeedingModal from "@/components/feeding-modal";
 import { useLocation } from "wouter";
-import type { ActivityItem, WalkWithEvents, FeedingWithUser } from "@shared/schema";
+import type { ActivityItem, WalkWithEvents, FeedingWithUser, Dog } from "@shared/schema";
 
 export default function Home() {
   const { user, isLoading } = useAuth();
@@ -73,6 +73,21 @@ export default function Home() {
       return response.json() as Promise<WalkWithEvents | null>;
     },
   });
+
+  // Fetch dog profile
+  const { data: dogProfile } = useQuery({
+    queryKey: ["/api/dogs/profile"],
+    enabled: !!user,
+    queryFn: async () => {
+      const response = await fetch("/api/dogs/profile");
+      if (!response.ok) throw new Error("Failed to fetch dog profile");
+      return response.json() as Promise<Dog | null>;
+    },
+  });
+
+  const dogName = dogProfile?.name || "Buddy";
+  const dogBreed = dogProfile?.breed || "Golden Retriever";
+  const dogPhotoUrl = dogProfile?.photoUrl;
 
   // Start walk mutation
   const startWalkMutation = useMutation({
@@ -215,18 +230,24 @@ export default function Home() {
         <Card className="bg-white rounded-3xl shadow-sm mb-6">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4 mb-4">
-              <img 
-                src="https://images.unsplash.com/photo-1552053831-71594a27632d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=300&h=300" 
-                alt="Golden retriever dog" 
-                className="w-16 h-16 rounded-full object-cover border-4 border-pet-orange"
-                data-testid="img-dog-avatar"
-              />
+              {dogPhotoUrl ? (
+                <img 
+                  src={dogPhotoUrl} 
+                  alt={`${dogName} photo`}
+                  className="w-16 h-16 rounded-full object-cover border-4 border-pet-orange"
+                  data-testid="img-dog-avatar"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-pet-orange bg-opacity-20 rounded-full flex items-center justify-center border-4 border-pet-orange">
+                  <i className="fas fa-dog text-pet-orange text-2xl"></i>
+                </div>
+              )}
               <div>
                 <h2 className="text-2xl font-bold text-gray-800" data-testid="text-dog-name">
-                  Buddy
+                  {dogName}
                 </h2>
                 <p className="text-gray-600" data-testid="text-dog-breed">
-                  Golden Retriever
+                  {dogBreed}
                 </p>
               </div>
             </div>
@@ -320,7 +341,7 @@ export default function Home() {
                   <i className="fas fa-paw text-gray-400 text-2xl"></i>
                 </div>
                 <h4 className="font-semibold text-gray-800 mb-2">No activities yet</h4>
-                <p className="text-gray-600 text-sm">Start tracking Buddy's activities!</p>
+                <p className="text-gray-600 text-sm">Start tracking {dogName}'s activities!</p>
               </CardContent>
             </Card>
           ) : (
@@ -333,7 +354,7 @@ export default function Home() {
                     </div>
                     <div className="flex-1">
                       <div className="font-semibold text-gray-800">
-                        {activity.type === 'walk' ? 'Walk completed' : 'Fed Buddy'}
+                        {activity.type === 'walk' ? 'Walk completed' : `Fed ${dogName}`}
                       </div>
                       {activity.type === 'walk' && activity.events && (
                         <div className="text-sm text-gray-600">

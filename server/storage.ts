@@ -3,6 +3,7 @@ import {
   walks,
   walkEvents,
   feedings,
+  dogs,
   type User,
   type UpsertUser,
   type Walk,
@@ -11,6 +12,8 @@ import {
   type InsertWalkEvent,
   type Feeding,
   type InsertFeeding,
+  type Dog,
+  type InsertDog,
   type WalkWithEvents,
   type FeedingWithUser,
   type ActivityItem,
@@ -42,6 +45,12 @@ export interface IStorage {
   // Activity operations
   getRecentActivity(limit?: number): Promise<ActivityItem[]>;
   getActivitiesByDateRange(startDate: Date, endDate: Date): Promise<ActivityItem[]>;
+  
+  // Dog operations
+  createDog(dog: InsertDog): Promise<Dog>;
+  updateDog(id: string, updates: Partial<Dog>): Promise<Dog>;
+  getDog(id: string): Promise<Dog | undefined>;
+  getUserDog(userId: string): Promise<Dog | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -320,6 +329,43 @@ export class DatabaseStorage implements IStorage {
       ...Array.from(walksMap.values()),
       ...feedingActivities,
     ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+  
+  // Dog operations
+  async createDog(dogData: InsertDog): Promise<Dog> {
+    const [dog] = await db
+      .insert(dogs)
+      .values(dogData)
+      .returning();
+    return dog;
+  }
+
+  async updateDog(id: string, updates: Partial<Dog>): Promise<Dog> {
+    const [dog] = await db
+      .update(dogs)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(dogs.id, id))
+      .returning();
+    
+    if (!dog) {
+      throw new Error(`Dog with id ${id} not found`);
+    }
+    
+    return dog;
+  }
+
+  async getDog(id: string): Promise<Dog | undefined> {
+    const [dog] = await db.select().from(dogs).where(eq(dogs.id, id));
+    return dog;
+  }
+
+  async getUserDog(userId: string): Promise<Dog | undefined> {
+    const [dog] = await db
+      .select()
+      .from(dogs)
+      .where(and(eq(dogs.userId, userId), eq(dogs.isActive, true)))
+      .orderBy(desc(dogs.createdAt));
+    return dog;
   }
 }
 

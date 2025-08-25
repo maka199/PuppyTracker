@@ -35,6 +35,20 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Dog profiles table
+export const dogs = pgTable("dogs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: varchar("name").notNull().default("Buddy"),
+  breed: varchar("breed").default("Golden Retriever"),
+  photoUrl: varchar("photo_url"),
+  birthDate: timestamp("birth_date"),
+  weight: integer("weight"), // in pounds
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Dog walks table
 export const walks = pgTable("walks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -70,6 +84,14 @@ export const feedings = pgTable("feedings", {
 export const usersRelations = relations(users, ({ many }) => ({
   walks: many(walks),
   feedings: many(feedings),
+  dogs: many(dogs),
+}));
+
+export const dogsRelations = relations(dogs, ({ one }) => ({
+  user: one(users, {
+    fields: [dogs.userId],
+    references: [users.id],
+  }),
 }));
 
 export const walksRelations = relations(walks, ({ one, many }) => ({
@@ -110,6 +132,12 @@ export const insertFeedingSchema = createInsertSchema(feedings).omit({
   createdAt: true,
 });
 
+export const insertDogSchema = createInsertSchema(dogs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -119,6 +147,8 @@ export type WalkEvent = typeof walkEvents.$inferSelect;
 export type InsertWalkEvent = z.infer<typeof insertWalkEventSchema>;
 export type Feeding = typeof feedings.$inferSelect;
 export type InsertFeeding = z.infer<typeof insertFeedingSchema>;
+export type Dog = typeof dogs.$inferSelect;
+export type InsertDog = z.infer<typeof insertDogSchema>;
 
 // Extended types for API responses
 export type WalkWithEvents = Walk & {

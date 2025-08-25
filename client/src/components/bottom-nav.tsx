@@ -36,8 +36,8 @@ export default function BottomNav({ currentPage }: BottomNavProps) {
   ];
 
   const handleNavClick = (item: typeof navItems[0]) => {
-    if (item.id === 'stats' || item.id === 'profile') {
-      // These screens are not implemented yet
+    if (item.id === 'stats') {
+      // Stats screen is not implemented yet
       alert(`${item.label} screen coming soon!`);
       return;
     }
