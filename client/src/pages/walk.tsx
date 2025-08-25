@@ -272,14 +272,11 @@ export default function Walk() {
           <i className="fas fa-seedling text-xl mr-3"></i>
           <span>Log Poo Stop</span>
         </Button>
-      </div>
-
-      {/* End Walk Button */}
-      <div className="relative z-10 px-4 fixed bottom-8 left-4 right-4">
+        
         <Button
           onClick={() => completeWalkMutation.mutate()}
           disabled={completeWalkMutation.isPending}
-          className="w-full bg-pet-green hover:bg-pet-green/90 text-white rounded-2xl py-4 text-lg font-semibold shadow-xl"
+          className="w-full bg-pet-green hover:bg-pet-green/90 text-white rounded-2xl py-4 text-lg font-semibold shadow-lg"
           data-testid="button-complete-walk"
         >
           <i className="fas fa-check text-xl mr-3"></i>
