@@ -1,9 +1,23 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 export default function Landing() {
+  const [username, setUsername] = useState("");
+  const { login } = useAuthContext();
+
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    if (username.trim()) {
+      login(username.trim());
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
   };
 
   return (
@@ -28,16 +42,29 @@ export default function Landing() {
               </p>
             </div>
             
-            <Button 
-              onClick={handleLogin}
-              className="w-full bg-pet-green hover:bg-pet-green/90 text-white rounded-2xl py-6 text-lg font-semibold"
-              data-testid="button-login"
-            >
-              Sign In with Replit
-            </Button>
+            <div className="space-y-4">
+              <Input
+                type="text"
+                placeholder="Enter your name or nickname"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="rounded-2xl py-3 text-center"
+                data-testid="input-username"
+              />
+              
+              <Button 
+                onClick={handleLogin}
+                disabled={!username.trim()}
+                className="w-full bg-pet-green hover:bg-pet-green/90 text-white rounded-2xl py-6 text-lg font-semibold disabled:opacity-50"
+                data-testid="button-login"
+              >
+                Start Tracking
+              </Button>
+            </div>
             
             <div className="text-center">
-              <p className="text-xs text-gray-500">Secured with Replit Auth</p>
+              <p className="text-xs text-gray-500">Enter any name to continue</p>
             </div>
           </div>
         </CardContent>

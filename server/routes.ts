@@ -1,20 +1,25 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupSimpleAuth, validateUsername } from "./simpleAuth";
 import { insertWalkSchema, insertWalkEventSchema, insertFeedingSchema, insertDogSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Simple auth setup
+  await setupSimpleAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // User info route - returns the username for simple auth
+  app.get('/api/auth/user', validateUsername, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      const username = req.user.username;
+      // Return a simplified user object with username as the main identifier
+      res.json({
+        id: username, // Use username as ID for backwards compatibility  
+        firstName: username,
+        email: `${username}@local`, // Placeholder email for compatibility
+        username: username
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -22,12 +27,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Walk routes
-  app.post('/api/walks', isAuthenticated, async (req: any, res) => {
+  app.post('/api/walks', validateUsername, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const username = req.user.username;
       const walkData = insertWalkSchema.parse({
         ...req.body,
-        userId,
+        userId: username, // Use username as userId
         startTime: new Date(),
       });
       
@@ -39,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/walks/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/walks/:id', validateUsername, async (req: any, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -57,10 +62,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/walks/active', isAuthenticated, async (req: any, res) => {
+  app.get('/api/walks/active', validateUsername, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const activeWalk = await storage.getActiveWalk(userId);
+      const username = req.user.username;
+      const activeWalk = await storage.getActiveWalk(username);
       res.json(activeWalk);
     } catch (error) {
       console.error("Error fetching active walk:", error);
@@ -68,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/walks/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/walks/:id', validateUsername, async (req, res) => {
     try {
       const { id } = req.params;
       const walk = await storage.getWalk(id);
@@ -83,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Walk event routes
-  app.post('/api/walks/:walkId/events', isAuthenticated, async (req, res) => {
+  app.post('/api/walks/:walkId/events', validateUsername, async (req, res) => {
     try {
       const { walkId } = req.params;
       const eventData = insertWalkEventSchema.parse({
@@ -101,12 +106,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Feeding routes
-  app.post('/api/feedings', isAuthenticated, async (req: any, res) => {
+  app.post('/api/feedings', validateUsername, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const username = req.user.username;
       const feedingData = insertFeedingSchema.parse({
         ...req.body,
-        userId,
+        userId: username, // Use username as userId
         timestamp: new Date(),
       });
       
@@ -159,10 +164,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dog profile routes
-  app.get('/api/dogs/profile', isAuthenticated, async (req: any, res) => {
+  app.get('/api/dogs/profile', validateUsername, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const dog = await storage.getUserDog(userId);
+      const username = req.user.username;
+      const dog = await storage.getUserDog(username);
       res.json(dog);
     } catch (error) {
       console.error("Error fetching dog profile:", error);
@@ -170,12 +175,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/dogs', isAuthenticated, async (req: any, res) => {
+  app.post('/api/dogs', validateUsername, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const username = req.user.username;
       const dogData = insertDogSchema.parse({
         ...req.body,
-        userId,
+        userId: username, // Use username as userId
       });
       
       const dog = await storage.createDog(dogData);
@@ -186,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/dogs/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/dogs/:id', validateUsername, async (req: any, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -197,8 +202,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Dog not found" });
       }
       
-      const userId = req.user.claims.sub;
-      if (existingDog.userId !== userId) {
+      const username = req.user.username;
+      if (existingDog.userId !== username) {
         return res.status(403).json({ message: "Access denied" });
       }
       
