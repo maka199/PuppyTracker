@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import type { Dog, InsertDog } from "@shared/schema";
 
 export default function Profile() {
   const { user, isLoading: userLoading } = useAuth();
+  const { logout } = useAuthContext();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [dogName, setDogName] = useState("");
@@ -21,20 +22,8 @@ export default function Profile() {
   const [dogPhotoUrl, setDogPhotoUrl] = useState("");
   const [dogWeight, setDogWeight] = useState("");
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!userLoading && !user) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [user, userLoading, toast]);
+  // No need to redirect if not authenticated - the App component handles this
+  // Removed the old auth check that redirected to /api/login
 
   // Fetch dog profile
   const { data: dogProfile, isLoading: dogLoading } = useQuery({
@@ -84,17 +73,6 @@ export default function Profile() {
       setIsEditing(false);
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
         description: "Failed to save dog profile",
@@ -167,7 +145,7 @@ export default function Profile() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.href = "/api/logout"}
+              onClick={logout}
               data-testid="button-logout"
             >
               <i className="fas fa-sign-out-alt text-xl text-gray-600"></i>
