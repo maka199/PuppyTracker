@@ -32,14 +32,14 @@ Preferred communication style: Simple, everyday language.
 - **Database Connection**: Connection pooling with @neondatabase/serverless
 
 ### Authentication and Authorization
-- **Provider**: Replit Auth (OpenID Connect)
-- **Strategy**: Passport.js with OpenID Connect strategy
-- **Session Management**: Server-side sessions with secure HTTP-only cookies
-- **Authorization**: Route-level middleware protection for authenticated endpoints
+- **Provider**: Simple username-based authentication
+- **Strategy**: Username stored in localStorage (frontend) and validated via custom middleware (backend)
+- **Session Management**: Stateless - no server-side sessions required
+- **Authorization**: Route-level middleware that validates username from `x-username` header
 
 ### External Dependencies
 - **Database**: Neon PostgreSQL serverless database
-- **Authentication**: Replit OpenID Connect service
+- **Authentication**: Simple username-based system (no external auth service)
 - **Development**: Replit-specific development tools and error overlay
 - **UI Components**: Radix UI headless components
 - **Icons**: Font Awesome via CDN
@@ -50,3 +50,27 @@ Preferred communication style: Simple, everyday language.
 - **Activity Feed**: Shared timeline showing all family members' logged activities
 - **Feeding Management**: Quick feeding logs with meal type and portion tracking
 - **Responsive Design**: Mobile-first design with bottom navigation for mobile devices
+- **Simple Authentication**: Username-based login with localStorage persistence and stateless backend validation
+
+## Authentication System
+
+### Overview
+The app uses a simple username-based authentication system that allows family members to log in with just their name or nickname. This replaces the previous Replit Auth system for easier deployment and usage.
+
+### Frontend Authentication Flow
+1. **Landing Page**: Users see a simple login form with a username input field
+2. **Login Process**: Enter any name/nickname and click "Start Tracking"
+3. **Storage**: Username is stored in browser localStorage for persistence
+4. **Context**: React AuthContext provides username state throughout the app
+5. **Logout**: Simple logout button clears localStorage and returns to landing page
+
+### Backend Authentication
+1. **Middleware**: `validateUsername` middleware checks for username in `x-username` header or request body
+2. **API Requests**: All authenticated endpoints require username via header
+3. **User Association**: All activities (walks, feedings, etc.) are associated with the provided username
+4. **No Sessions**: Stateless system with no server-side session management required
+
+### API Usage
+- All API requests from authenticated users include: `{ 'x-username': 'user-name' }`
+- Backend associates all created resources with the provided username
+- No complex token management or session handling needed
