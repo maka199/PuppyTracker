@@ -30,7 +30,7 @@ export default function Home() {
     } else if (activity.type === 'walk') {
       await apiRequest('DELETE', `/api/walks/${activity.id}`);
     }
-    queryClient.invalidateQueries({ queryKey: ["/api/activity"] });
+    await queryClient.refetchQueries({ queryKey: ["/api/activity"] });
     toast({ title: 'Deleted', description: 'Activity deleted.' });
   };
   const { user, isLoading } = useAuth();
