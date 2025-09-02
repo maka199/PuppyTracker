@@ -27,7 +27,7 @@ export async function apiRequest(
     headers['Content-Type'] = 'application/json';
   }
 
-  const apiBase = 'https://puppytracker-backend.onrender.com';
+  const apiBase = 'https://puppytracker.onrender.com';
   const fullUrl = url.startsWith('/api') ? apiBase + url : url;
   const res = await fetch(fullUrl, {
     method,
@@ -53,7 +53,7 @@ export const getQueryFn: <T>(options: {
       headers['x-username'] = username;
     }
 
-  const apiBase = 'https://puppytracker-backend.onrender.com';
+  const apiBase = 'https://puppytracker.onrender.com';
   const url = queryKey[0];
   const fullUrl = typeof url === 'string' && url.startsWith('/api') ? apiBase + url : String(url);
   const res = await fetch(fullUrl, {
