@@ -1,85 +1,64 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
-interface FeedingModalProps {
+interface EditFeedingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  feeding: any;
 }
 
-export default function FeedingModal({ isOpen, onClose }: FeedingModalProps) {
+export default function EditFeedingModal({ isOpen, onClose, feeding }: EditFeedingModalProps) {
   const { toast } = useToast();
-  const [selectedMealType, setSelectedMealType] = useState<string>('lunch');
-  const [selectedPortion, setSelectedPortion] = useState<string>('regular');
-  const [notes, setNotes] = useState('');
+  const [selectedMealType, setSelectedMealType] = useState<string>(feeding.mealType);
+  const [selectedPortion, setSelectedPortion] = useState<string>(feeding.portion);
+  const [notes, setNotes] = useState(feeding.notes || "");
   const [feedingTime, setFeedingTime] = useState(() => {
-    // Default to now in ISO format for input[type=datetime-local]
-    const now = new Date();
-    now.setSeconds(0, 0);
-    return now.toISOString().slice(0, 16);
+    const date = new Date(feeding.timestamp);
+    date.setSeconds(0, 0);
+    return date.toISOString().slice(0, 16);
   });
 
-  const saveFeedingMutation = useMutation({
+  const saveEditMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/feedings", {
-        mealType: selectedMealType,
-        portion: selectedPortion,
-        notes: notes.trim() || undefined,
-        timestamp: new Date(feedingTime).toISOString(),
-      });
+      await apiRequest("PUT", `/api/feedings/${feeding.id}`,
+        {
+          mealType: selectedMealType,
+          portion: selectedPortion,
+          notes: notes.trim() || undefined,
+          timestamp: new Date(feedingTime).toISOString(),
+        }
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/activity"] });
       queryClient.invalidateQueries({ queryKey: ["/api/feedings/last"] });
       toast({
-        title: "Feeding Logged!",
-        description: "Buddy's meal has been recorded.",
+        title: "Feeding Updated!",
+        description: "The feeding log has been updated.",
       });
-      handleClose();
+      onClose();
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to log feeding",
+        description: "Failed to update feeding log.",
         variant: "destructive",
       });
     },
   });
 
-  const handleClose = () => {
-    setSelectedMealType('lunch');
-    setSelectedPortion('regular');
-    setNotes('');
-    setFeedingTime(() => {
-      const now = new Date();
-      now.setSeconds(0, 0);
-      return now.toISOString().slice(0, 16);
-    });
-    onClose();
-  };
+  if (!isOpen) return null;
 
   const mealTypes = [
-    { id: 'breakfast', label: 'Breakfast', icon: 'fa-sun' },
+    { id: 'breakfast', label: 'Breakfast', icon: 'fa-coffee' },
     { id: 'lunch', label: 'Lunch', icon: 'fa-utensils' },
     { id: 'dinner', label: 'Dinner', icon: 'fa-moon' },
   ];
-
   const portions = [
     { id: 'small', label: 'Small', emoji: '🥄' },
     { id: 'regular', label: 'Regular', emoji: '🍽️' },
@@ -87,20 +66,18 @@ export default function FeedingModal({ isOpen, onClose }: FeedingModalProps) {
     { id: 'treats', label: 'Treats', emoji: '🦴' },
   ];
 
-  if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
       <Card className="w-full max-w-md rounded-t-3xl transform transition-transform duration-300">
         <CardContent className="p-0">
           <div className="flex items-center justify-between p-6 border-b">
-            <h3 className="text-xl font-semibold text-gray-800">Log Feeding</h3>
+            <h3 className="text-xl font-semibold text-gray-800">Edit Feeding</h3>
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleClose}
+              onClick={onClose}
               className="p-2 text-gray-400 hover:text-gray-600"
-              data-testid="button-close-feeding-modal"
+              data-testid="button-close-edit-feeding-modal"
             >
               <i className="fas fa-times text-xl"></i>
             </Button>
@@ -113,7 +90,7 @@ export default function FeedingModal({ isOpen, onClose }: FeedingModalProps) {
                 value={feedingTime}
                 onChange={e => setFeedingTime(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-xl mb-4"
-                data-testid="input-feeding-time"
+                data-testid="input-edit-feeding-time"
                 max={new Date().toISOString().slice(0, 16)}
               />
             </div>
@@ -130,7 +107,7 @@ export default function FeedingModal({ isOpen, onClose }: FeedingModalProps) {
                         ? 'border-pet-orange bg-pet-orange bg-opacity-10'
                         : 'border-gray-200 hover:border-pet-orange'
                     }`}
-                    data-testid={`button-meal-${mealType.id}`}
+                    data-testid={`button-edit-meal-${mealType.id}`}
                   >
                     <i className={`fas ${mealType.icon} text-pet-orange text-xl`}></i>
                     <div className="text-sm font-medium">{mealType.label}</div>
@@ -151,7 +128,7 @@ export default function FeedingModal({ isOpen, onClose }: FeedingModalProps) {
                         ? 'border-pet-green bg-pet-green bg-opacity-10'
                         : 'border-gray-200 hover:border-pet-green'
                     }`}
-                    data-testid={`button-portion-${portion.id}`}
+                    data-testid={`button-edit-portion-${portion.id}`}
                   >
                     <div className="text-lg">{portion.emoji}</div>
                     <div className="text-xs">{portion.label}</div>
@@ -167,16 +144,16 @@ export default function FeedingModal({ isOpen, onClose }: FeedingModalProps) {
                 placeholder="Any special notes..."
                 className="w-full p-3 border border-gray-300 rounded-xl resize-none"
                 rows={3}
-                data-testid="textarea-feeding-notes"
+                data-testid="textarea-edit-feeding-notes"
               />
             </div>
             <Button
-              onClick={() => saveFeedingMutation.mutate()}
-              disabled={saveFeedingMutation.isPending}
+              onClick={() => saveEditMutation.mutate()}
+              disabled={saveEditMutation.isPending}
               className="w-full bg-pet-orange hover:bg-pet-orange/90 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg"
-              data-testid="button-save-feeding"
+              data-testid="button-save-edit-feeding"
             >
-              {saveFeedingMutation.isPending ? 'Logging...' : 'Log Feeding'}
+              {saveEditMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </CardContent>

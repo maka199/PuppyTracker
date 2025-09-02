@@ -54,6 +54,17 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  async updateFeeding(id: string, updates: Partial<Feeding>): Promise<Feeding> {
+    if (updates.timestamp) {
+      updates.timestamp = new Date(updates.timestamp);
+    }
+    const [updatedFeeding] = await db
+      .update(feedings)
+      .set(updates)
+      .where(eq(feedings.id, id))
+      .returning();
+    return updatedFeeding;
+  }
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));

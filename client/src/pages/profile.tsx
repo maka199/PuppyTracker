@@ -30,7 +30,7 @@ export default function Profile() {
     queryKey: ["/api/dogs/profile"],
     enabled: !!user,
     queryFn: async () => {
-      const response = await fetch("/api/dogs/profile");
+      const response = await apiRequest("GET", "/api/dogs/profile");
       if (!response.ok) throw new Error("Failed to fetch dog profile");
       return response.json() as Promise<Dog | null>;
     },
@@ -239,19 +239,51 @@ export default function Profile() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="dog-photo" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Photo URL (Optional)
+                    Dog Photo (Optional)
                   </Label>
-                  <Input
-                    id="dog-photo"
-                    type="url"
-                    value={dogPhotoUrl}
-                    onChange={(e) => setDogPhotoUrl(e.target.value)}
-                    placeholder="https://example.com/your-dog-photo.jpg"
-                    className="w-full rounded-xl border-gray-300"
-                    data-testid="input-dog-photo"
-                  />
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="dog-photo"
+                      type="url"
+                      value={dogPhotoUrl}
+                      onChange={(e) => setDogPhotoUrl(e.target.value)}
+                      placeholder="https://example.com/your-dog-photo.jpg"
+                      className="w-full rounded-xl border-gray-300"
+                      data-testid="input-dog-photo"
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="dog-photo-upload"
+                      style={{ display: 'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        try {
+                          const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            body: formData,
+                          });
+                          const data = await res.json();
+                          if (data.url) setDogPhotoUrl(data.url);
+                          else alert('Upload failed');
+                        } catch {
+                          alert('Upload failed');
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('dog-photo-upload')?.click()}
+                    >
+                      Välj bild
+                    </Button>
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Upload your photo to an image hosting service and paste the URL here
+                    Ladda upp en bild från din telefon eller klistra in en URL
                   </p>
                 </div>
 

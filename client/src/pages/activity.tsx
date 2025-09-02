@@ -1,17 +1,39 @@
+  // Format time ago for display
+  const formatTimeAgo = (timestamp: string) => {
+    const now = Date.now();
+    const then = new Date(timestamp).getTime();
+    const diff = Math.floor((now - then) / 1000);
+    if (diff < 60) return `${diff} seconds ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} minute${Math.floor(diff / 60) === 1 ? '' : 's'} ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hour${Math.floor(diff / 3600) === 1 ? '' : 's'} ago`;
+    return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) === 1 ? '' : 's'} ago`;
+  };
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import BottomNav from "@/components/bottom-nav";
 import type { ActivityItem } from "@shared/schema";
+import EditFeedingModal from "@/components/edit-feeding-modal";
 
 type FilterType = 'all' | 'walks' | 'feeding' | 'today' | 'week';
 
 export default function Activity() {
-  const { user } = useAuth();
+  const [editingFeeding, setEditingFeeding] = useState<any | null>(null);
   const { toast } = useToast();
+  const deleteActivity = async (activity: any) => {
+    if (activity.type === 'feeding') {
+      await apiRequest('DELETE', `/api/feedings/${activity.id}`);
+    } else if (activity.type === 'walk') {
+      await apiRequest('DELETE', `/api/walks/${activity.id}`);
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/activity"] });
+    toast({ title: 'Deleted', description: 'Activity deleted.' });
+  };
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
   // Fetch activities
@@ -19,7 +41,7 @@ export default function Activity() {
     queryKey: ["/api/activity"],
     enabled: !!user,
     queryFn: async () => {
-      const response = await fetch("/api/activity?limit=50");
+      const response = await apiRequest("GET", "/api/activity?limit=50");
       if (!response.ok) throw new Error("Failed to fetch activities");
       return response.json() as Promise<ActivityItem[]>;
     },
@@ -197,7 +219,6 @@ export default function Activity() {
                 <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
                   {dateLabel}
                 </div>
-                
                 <div className="space-y-3">
                   {dayActivities.map((activity) => (
                     <Card key={activity.id} className="bg-white rounded-2xl shadow-sm">
@@ -208,23 +229,31 @@ export default function Activity() {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
-                              <div className="font-semibold text-gray-800">
-                                {activity.type === 'walk' ? 'Walk' : 'Feeding'}
+                              <div className="font-semibold text-gray-800 flex items-center">
+                                <span>{activity.type === 'walk' ? 'Walk' : 'Feeding'}</span>
+                                <span className="flex items-center space-x-1 ml-2">
+                                  {activity.type === 'feeding' && (
+                                    <Button size="icon" variant="ghost" aria-label="Edit feeding" onClick={() => setEditingFeeding({ ...activity.data, id: activity.id, timestamp: activity.timestamp })}>
+                                      <i className="fas fa-pen text-gray-400 hover:text-pet-orange"></i>
+                                    </Button>
+                                  )}
+                                  <Button size="icon" variant="ghost" aria-label="Delete activity" onClick={() => deleteActivity(activity)}>
+                                    <i className="fas fa-trash text-gray-400 hover:text-red-500"></i>
+                                  </Button>
+                                </span>
                               </div>
                               <div className="text-sm text-gray-500">
                                 {activity.type === 'walk' 
-                                  ? formatTimeRange(activity.timestamp.toString(), (activity.data as any).duration)
-                                  : formatTime(activity.timestamp.toString())
+                                  ? `${formatTimeRange(activity.timestamp.toString(), (activity.data as any).duration)}, ${formatTimeAgo(activity.timestamp.toString())}`
+                                  : `${formatTime(activity.timestamp.toString())}, ${formatTimeAgo(activity.timestamp.toString())}`
                                 }
                               </div>
                             </div>
-                            
                             {activity.type === 'walk' && (activity.data as any).duration && (
                               <div className="text-sm text-gray-600 mb-2">
                                 Duration: {Math.floor((activity.data as any).duration)} minutes
                               </div>
                             )}
-                            
                             {activity.type === 'walk' && activity.events && (
                               <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2">
                                 <div className="flex items-center space-x-1">
@@ -237,18 +266,16 @@ export default function Activity() {
                                 </div>
                               </div>
                             )}
-                            
                             {activity.type === 'feeding' && (
                               <div className="text-sm text-gray-600 mb-2">
                                 {(activity.data as any).mealType} - {(activity.data as any).portion} portion
                                 {(activity.data as any).notes && (
-                                  <div className="text-sm text-gray-500 italic mt-1">
+                                  <span className="text-sm text-gray-500 italic ml-2">
                                     "{(activity.data as any).notes}"
-                                  </div>
+                                  </span>
                                 )}
                               </div>
                             )}
-                            
                             <div className="flex items-center space-x-2">
                               <div className={`w-6 h-6 ${getUserColor(activity.user.id)} rounded-full flex items-center justify-center`}>
                                 <span className="text-white text-xs font-semibold">
@@ -272,6 +299,15 @@ export default function Activity() {
       </div>
 
       <BottomNav currentPage="activity" />
+
+      {/* Edit Feeding Modal */}
+      {editingFeeding && (
+        <EditFeedingModal
+          isOpen={!!editingFeeding}
+          onClose={() => setEditingFeeding(null)}
+          feeding={editingFeeding}
+        />
+      )}
     </div>
   );
 }

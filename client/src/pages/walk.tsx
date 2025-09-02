@@ -36,7 +36,7 @@ export default function Walk() {
     enabled: !!user,
     refetchInterval: 5000, // Refetch every 5 seconds
     queryFn: async () => {
-      const response = await fetch("/api/walks/active");
+      const response = await apiRequest("GET", "/api/walks/active");
       if (!response.ok) throw new Error("Failed to fetch active walk");
       return response.json() as Promise<WalkWithEvents | null>;
     },

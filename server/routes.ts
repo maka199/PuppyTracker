@@ -1,3 +1,7 @@
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -6,6 +10,26 @@ import { insertWalkSchema, insertWalkEventSchema, insertFeedingSchema, insertDog
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Ensure uploads directory exists (ESM fix)
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const uploadsDir = path.join(__dirname, "../uploads/");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+  }
+  // Set up multer for file uploads
+  const upload = multer({
+    dest: uploadsDir,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  });
+  // File upload endpoint
+  app.post("/api/upload", upload.single("file"), (req: any, res: any) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.status(200).json({ url: fileUrl });
+  });
   // Simple auth setup
   await setupSimpleAuth(app);
 
@@ -49,7 +73,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = req.body;
       
-      // Convert endTime string to Date if present
+      // Convert startTime and endTime strings to Date if present
+      if (updates.startTime) {
+        updates.startTime = new Date(updates.startTime);
+      }
       if (updates.endTime) {
         updates.endTime = new Date(updates.endTime);
       }
@@ -106,15 +133,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Feeding routes
+  app.put('/api/feedings/:id', validateUsername, async (req: any, res) => {
+    try {
+      const username = req.user.username;
+      const id = req.params.id;
+      // Only allow updating own feedings
+      const feeding = await storage.getUserFeedings(username, 1000);
+      const target = feeding.find(f => f.id === id);
+      if (!target) {
+        return res.status(404).json({ message: "Feeding not found" });
+      }
+      // Only allow updating allowed fields
+      const allowedFields = ["mealType", "portion", "notes", "timestamp"];
+      const updates: any = {};
+      for (const key of allowedFields) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+      const updated = await storage.updateFeeding(id, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating feeding:", error);
+      res.status(400).json({ message: "Failed to update feeding" });
+    }
+  });
   app.post('/api/feedings', validateUsername, async (req: any, res) => {
     try {
       const username = req.user.username;
       const feedingData = insertFeedingSchema.parse({
         ...req.body,
         userId: username, // Use username as userId
-        timestamp: new Date(),
+        timestamp: req.body.timestamp ? new Date(req.body.timestamp) : new Date(),
       });
-      
       const feeding = await storage.createFeeding(feedingData);
       res.json(feeding);
     } catch (error) {
@@ -168,6 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const username = req.user.username;
       const dog = await storage.getUserDog(username);
+      console.log("[GET /api/dogs/profile] user:", username, "dog:", dog);
       res.json(dog);
     } catch (error) {
       console.error("Error fetching dog profile:", error);
@@ -178,16 +231,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/dogs', validateUsername, async (req: any, res) => {
     try {
       const username = req.user.username;
+      // Ensure user exists in DB before creating dog
+      await storage.upsertUser({
+        id: username,
+        email: `${username}@local`,
+        firstName: username,
+        lastName: null,
+        profileImageUrl: null,
+      });
       const dogData = insertDogSchema.parse({
         ...req.body,
         userId: username, // Use username as userId
       });
-      
       const dog = await storage.createDog(dogData);
       res.json(dog);
     } catch (error) {
-      console.error("Error creating dog:", error);
-      res.status(400).json({ message: "Failed to create dog" });
+      console.error("Error creating dog:", error, "Type:", typeof error, JSON.stringify(error));
+      res.status(400).json({ message: `Failed to create dog: ${JSON.stringify(error)}` });
     }
   });
 
@@ -206,8 +266,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingDog.userId !== username) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
+      console.log("[PUT /api/dogs/:id] id:", id, "updates:", updates);
       const dog = await storage.updateDog(id, updates);
+      console.log("[PUT /api/dogs/:id] updated dog:", dog);
       res.json(dog);
     } catch (error) {
       console.error("Error updating dog:", error);

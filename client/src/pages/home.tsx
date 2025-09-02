@@ -1,4 +1,11 @@
-import { useEffect, useState } from "react";
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+  import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -8,14 +15,33 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import BottomNav from "@/components/bottom-nav";
 import FeedingModal from "@/components/feeding-modal";
+import EditFeedingModal from "@/components/edit-feeding-modal";
+import EditWalkModal from "@/components/edit-walk-modal";
 import { useLocation } from "wouter";
 import type { ActivityItem, WalkWithEvents, FeedingWithUser, Dog } from "@shared/schema";
 
 export default function Home() {
-  const { user, isLoading } = useAuth();
+  const [editingFeeding, setEditingFeeding] = useState<any | null>(null);
+  const [editingWalk, setEditingWalk] = useState<any | null>(null);
   const { toast } = useToast();
+  const deleteActivity = async (activity: any) => {
+    if (activity.type === 'feeding') {
+      await apiRequest('DELETE', `/api/feedings/${activity.id}`);
+    } else if (activity.type === 'walk') {
+      await apiRequest('DELETE', `/api/walks/${activity.id}`);
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/activity"] });
+    toast({ title: 'Deleted', description: 'Activity deleted.' });
+  };
+  const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [showFeedingModal, setShowFeedingModal] = useState(false);
+  const [showWalkTimeModal, setShowWalkTimeModal] = useState(false);
+  const [walkStartTime, setWalkStartTime] = useState(() => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+  });
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Update time every minute
@@ -46,7 +72,7 @@ export default function Home() {
     queryKey: ["/api/activity"],
     enabled: !!user,
     queryFn: async () => {
-      const response = await fetch("/api/activity?limit=5");
+      const response = await apiRequest("GET", "/api/activity?limit=5");
       if (!response.ok) throw new Error("Failed to fetch activities");
       return response.json() as Promise<ActivityItem[]>;
     },
@@ -57,7 +83,7 @@ export default function Home() {
     queryKey: ["/api/feedings/last"],
     enabled: !!user,
     queryFn: async () => {
-      const response = await fetch("/api/feedings/last");
+      const response = await apiRequest("GET", "/api/feedings/last");
       if (!response.ok) throw new Error("Failed to fetch last feeding");
       return response.json() as Promise<FeedingWithUser | null>;
     },
@@ -68,7 +94,7 @@ export default function Home() {
     queryKey: ["/api/walks/active"],
     enabled: !!user,
     queryFn: async () => {
-      const response = await fetch("/api/walks/active");
+      const response = await apiRequest("GET", "/api/walks/active");
       if (!response.ok) throw new Error("Failed to fetch active walk");
       return response.json() as Promise<WalkWithEvents | null>;
     },
@@ -79,7 +105,7 @@ export default function Home() {
     queryKey: ["/api/dogs/profile"],
     enabled: !!user,
     queryFn: async () => {
-      const response = await fetch("/api/dogs/profile");
+      const response = await apiRequest("GET", "/api/dogs/profile");
       if (!response.ok) throw new Error("Failed to fetch dog profile");
       return response.json() as Promise<Dog | null>;
     },
@@ -91,8 +117,8 @@ export default function Home() {
 
   // Start walk mutation
   const startWalkMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/walks", {});
+    mutationFn: async ({ startTime }: { startTime: string }) => {
+      await apiRequest("POST", "/api/walks", { startTime: new Date(startTime).toISOString() });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/walks/active"] });
@@ -122,8 +148,18 @@ export default function Home() {
     if (activeWalk) {
       setLocation("/walk");
     } else {
-      startWalkMutation.mutate();
+      setShowWalkTimeModal(true);
     }
+  };
+
+  const confirmStartWalk = () => {
+    startWalkMutation.mutate({ startTime: walkStartTime });
+    setShowWalkTimeModal(false);
+    setWalkStartTime(() => {
+      const now = new Date();
+      now.setSeconds(0, 0);
+      return now.toISOString().slice(0, 16);
+    });
   };
 
   const getLastWalkInfo = () => {
@@ -345,42 +381,75 @@ export default function Home() {
               </CardContent>
             </Card>
           ) : (
-            activities.map((activity) => (
-              <Card key={activity.id} className="bg-white rounded-2xl shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-12 h-12 ${activity.type === 'walk' ? 'bg-pet-blue' : 'bg-pet-orange'} bg-opacity-20 rounded-full flex items-center justify-center flex-shrink-0`}>
-                      <i className={`fas ${activity.type === 'walk' ? 'fa-walking' : 'fa-utensils'} ${activity.type === 'walk' ? 'text-pet-blue' : 'text-pet-orange'}`}></i>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-gray-800">
-                        {activity.type === 'walk' ? 'Walk completed' : `Fed ${dogName}`}
+            <>
+              {activities.map((activity) => (
+                <Card key={activity.id} className="bg-white rounded-2xl shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-12 h-12 ${activity.type === 'walk' ? 'bg-pet-blue' : 'bg-pet-orange'} bg-opacity-20 rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <i className={`fas ${activity.type === 'walk' ? 'fa-walking' : 'fa-utensils'} ${activity.type === 'walk' ? 'text-pet-blue' : 'text-pet-orange'}`}></i>
                       </div>
-                      {activity.type === 'walk' && activity.events && (
-                        <div className="text-sm text-gray-600">
-                          {activity.events.filter(e => e.eventType === 'pee').length} pee stop{activity.events.filter(e => e.eventType === 'pee').length !== 1 ? 's' : ''}, {activity.events.filter(e => e.eventType === 'poo').length} poo stop{activity.events.filter(e => e.eventType === 'poo').length !== 1 ? 's' : ''}
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-800 flex items-center justify-between">
+                          <span>{activity.type === 'walk' ? 'Walk completed' : `Fed ${dogName}`}</span>
+                          <span className="flex items-center space-x-1">
+                            {activity.type === 'feeding' && (
+                              <Button size="icon" variant="ghost" aria-label="Edit feeding" onClick={() => setEditingFeeding({ ...activity.data, id: activity.id, timestamp: activity.timestamp })}>
+                                <i className="fas fa-pen text-gray-400 hover:text-pet-orange"></i>
+                              </Button>
+                            )}
+                            {activity.type === 'walk' && (
+                              <Button size="icon" variant="ghost" aria-label="Edit walk" onClick={() => setEditingWalk({ ...activity.data, id: activity.id, timestamp: activity.timestamp, events: activity.events })}>
+                                <i className="fas fa-pen text-gray-400 hover:text-pet-blue"></i>
+                              </Button>
+                            )}
+                            <Button size="icon" variant="ghost" aria-label="Delete activity" onClick={() => deleteActivity(activity)}>
+                              <i className="fas fa-trash text-gray-400 hover:text-red-500"></i>
+                            </Button>
+                          </span>
+                        </div>
+                        {activity.type === 'walk' && activity.events && (
+                          <div className="text-sm text-gray-600">
+                            {activity.events.filter(e => e.eventType === 'pee').length} pee stop{activity.events.filter(e => e.eventType === 'pee').length !== 1 ? 's' : ''}, {activity.events.filter(e => e.eventType === 'poo').length} poo stop{activity.events.filter(e => e.eventType === 'poo').length !== 1 ? 's' : ''}
+                          </div>
+                        )}
+                        {activity.type === 'feeding' && (
+                          <div className="text-sm text-gray-600">
+                            {(activity.data as any).mealType} - {(activity.data as any).portion} portion
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-500 flex items-center space-x-2">
+                          <span>by {getUserName(activity.user)}</span>
+                          <span>•</span>
+                          <span>{formatTime(activity.timestamp.toString())}, {formatTimeAgo(activity.timestamp.toString())}</span>
+                        </div>
+                      </div>
+                      {activity.type === 'walk' && (activity.data as any).duration && (
+                        <div className="text-sm font-semibold text-pet-blue">
+                          {Math.floor((activity.data as any).duration)} min
                         </div>
                       )}
-                      {activity.type === 'feeding' && (
-                        <div className="text-sm text-gray-600">
-                          {(activity.data as any).mealType} - {(activity.data as any).portion} portion
-                        </div>
-                      )}
-                      <div className="text-xs text-gray-500 flex items-center space-x-2">
-                        <span>by {getUserName(activity.user)}</span>
-                        <span>•</span>
-                        <span>{formatTimeAgo(activity.timestamp.toString())}</span>
-                      </div>
                     </div>
-                    {activity.type === 'walk' && (activity.data as any).duration && (
-                      <div className="text-sm font-semibold text-pet-blue">
-                        {Math.floor((activity.data as any).duration)} min
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              ))}
+              {/* Edit Feeding Modal (should be outside the activity list) */}
+              {editingFeeding && (
+                <EditFeedingModal
+                  isOpen={!!editingFeeding}
+                  onClose={() => setEditingFeeding(null)}
+                  feeding={editingFeeding}
+                />
+              )}
+              {/* Edit Walk Modal */}
+              {editingWalk && (
+                <EditWalkModal
+                  isOpen={!!editingWalk}
+                  onClose={() => setEditingWalk(null)}
+                  walk={editingWalk}
+                />
+              )}
+            </>
           )}
           
           {activities.length > 0 && (
@@ -403,6 +472,25 @@ export default function Home() {
         isOpen={showFeedingModal} 
         onClose={() => setShowFeedingModal(false)} 
       />
+      {/* Walk Time Modal */}
+      {showWalkTimeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
+          <div className="w-full max-w-md bg-white rounded-t-3xl p-6">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Set Walk Start Time</h3>
+            <input
+              type="datetime-local"
+              value={walkStartTime}
+              onChange={e => setWalkStartTime(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-xl mb-4"
+              max={new Date().toISOString().slice(0, 16)}
+            />
+            <div className="flex justify-end space-x-2">
+              <Button onClick={() => setShowWalkTimeModal(false)} variant="outline">Cancel</Button>
+              <Button onClick={confirmStartWalk} className="bg-pet-blue text-white">Start Walk</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
