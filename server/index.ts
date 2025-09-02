@@ -1,4 +1,5 @@
 import path from "path";
+import cors from "cors";
 import { fileURLToPath } from "url";
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
@@ -9,6 +10,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.use(cors({
+  origin: "https://puppy-tracker.vercel.app",
+  credentials: true
+}));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
