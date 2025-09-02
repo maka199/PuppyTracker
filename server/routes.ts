@@ -60,6 +60,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startTime: new Date(),
       });
       
+      // Ensure user exists in DB before creating walk
+      await storage.upsertUser({
+        id: username,
+        email: `${username}@local`,
+        firstName: username,
+        lastName: null,
+        profileImageUrl: null,
+      });
       const walk = await storage.createWalk(walkData);
       res.json(walk);
     } catch (error) {
@@ -166,6 +174,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId: username, // Use username as userId
         timestamp: req.body.timestamp ? new Date(req.body.timestamp) : new Date(),
+      });
+      // Ensure user exists in DB before creating feeding
+      await storage.upsertUser({
+        id: username,
+        email: `${username}@local`,
+        firstName: username,
+        lastName: null,
+        profileImageUrl: null,
       });
       const feeding = await storage.createFeeding(feedingData);
       res.json(feeding);
