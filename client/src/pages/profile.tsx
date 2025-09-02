@@ -262,10 +262,10 @@ export default function Profile() {
                         const formData = new FormData();
                         formData.append('file', file);
                         try {
-                          const res = await fetch('/api/upload', {
-                            method: 'POST',
-                            body: formData,
-                          });
+                            const res = await fetch('https://puppytracker-backend.onrender.com/api/upload', {
+                              method: 'POST',
+                              body: formData,
+                            });
                           const data = await res.json();
                           if (data.url) setDogPhotoUrl(data.url);
                           else alert('Upload failed');
