@@ -91,8 +91,14 @@ export default function Profile() {
   };
   const saveDogMutation = useMutation({
     mutationFn: async () => {
+      // För felsökning: logga user och userId
+      console.log('Saving dog profile, user:', user);
+  const userId = user?.id || user?.username || '';
+      if (!userId) {
+        throw new Error('Ingen giltig användar-id vid lagring av hundprofil');
+      }
       const dogData: InsertDog = {
-        userId: (user as any).id,
+        userId,
         name: dogName.trim(),
         breed: dogBreed.trim(),
         photoUrl: dogPhotoUrl.trim() || undefined,
