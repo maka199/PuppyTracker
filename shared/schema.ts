@@ -36,17 +36,26 @@ export const users = pgTable("users", {
 });
 
 // Dog profiles table
-export const dogs = pgTable("dogs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").references(() => users.id), // Skapare av profilen,
   name: varchar("name").notNull().default("Buddy"),
   breed: varchar("breed").default("Golden Retriever"),
   photoUrl: varchar("photo_url"),
   birthDate: timestamp("birth_date"),
   weight: integer("weight"), // in pounds
+  inviteCode: varchar("invite_code").unique(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Kopplingstabell mellan användare och hundprofiler
+export const dogMembers = pgTable("dog_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  dogId: varchar("dog_id").notNull().references(() => dogs.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  role: varchar("role").default("member"), // t.ex. 'owner', 'member'
+  joinedAt: timestamp("joined_at").defaultNow(),
 });
 
 // Dog walks table
@@ -85,11 +94,24 @@ export const usersRelations = relations(users, ({ many }) => ({
   walks: many(walks),
   feedings: many(feedings),
   dogs: many(dogs),
+  dogMemberships: many(dogMembers),
 }));
 
-export const dogsRelations = relations(dogs, ({ one }) => ({
+export const dogsRelations = relations(dogs, ({ one, many }) => ({
   user: one(users, {
     fields: [dogs.userId],
+    references: [users.id],
+  }),
+  members: many(dogMembers),
+}));
+
+export const dogMembersRelations = relations(dogMembers, ({ one }) => ({
+  dog: one(dogs, {
+    fields: [dogMembers.dogId],
+    references: [dogs.id],
+  }),
+  user: one(users, {
+    fields: [dogMembers.userId],
     references: [users.id],
   }),
 }));
@@ -138,6 +160,11 @@ export const insertDogSchema = createInsertSchema(dogs).omit({
   updatedAt: true,
 });
 
+export const insertDogMemberSchema = createInsertSchema(dogMembers).omit({
+  id: true,
+  joinedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -149,6 +176,8 @@ export type Feeding = typeof feedings.$inferSelect;
 export type InsertFeeding = z.infer<typeof insertFeedingSchema>;
 export type Dog = typeof dogs.$inferSelect;
 export type InsertDog = z.infer<typeof insertDogSchema>;
+export type DogMember = typeof dogMembers.$inferSelect;
+export type InsertDogMember = z.infer<typeof insertDogMemberSchema>;
 
 // Extended types for API responses
 export type WalkWithEvents = Walk & {

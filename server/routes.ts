@@ -1,3 +1,34 @@
+  // Anslut till hundprofil
+  app.post('/api/dogs/join', validateUsername, async (req: any, res) => {
+    try {
+      const username = req.user.username;
+      const { dogId, inviteCode } = req.body;
+      let dog;
+      if (dogId) {
+        dog = await storage.getDog(dogId);
+      } else if (inviteCode) {
+        dog = await storage.getDogByInviteCode(inviteCode);
+      } else {
+        return res.status(400).json({ message: 'dogId eller inviteCode krävs' });
+      }
+      if (!dog) {
+        return res.status(404).json({ message: 'Dog not found' });
+      }
+      const dogMemberData = insertDogMemberSchema.parse({
+        dogId: dog.id,
+        userId: username,
+        role: 'member',
+      });
+      await storage.createDogMember(dogMemberData);
+      res.json({ message: 'Du är nu medlem i hundprofilen', dogId: dog.id });
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+        return res.status(409).json({ message: 'Du är redan medlem i denna hundprofil.' });
+      }
+      console.error('Error joining dog profile:', error);
+      res.status(400).json({ message: 'Misslyckades att ansluta till hundprofil.' });
+    }
+  });
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -6,7 +37,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupSimpleAuth, validateUsername } from "./simpleAuth";
-import { insertWalkSchema, insertWalkEventSchema, insertFeedingSchema, insertDogSchema } from "@shared/schema";
+import { insertWalkSchema, insertWalkEventSchema, insertFeedingSchema, insertDogSchema, insertDogMemberSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -257,9 +288,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const dogData = insertDogSchema.parse({
         ...req.body,
-        userId: username, // Use username as userId
+        userId: username, // Use username as skapare
       });
       const dog = await storage.createDog(dogData);
+
+      // Lägg till skaparen som "owner" i dogMembers
+      const dogMemberData = insertDogMemberSchema.parse({
+        dogId: dog.id,
+        userId: username,
+        role: "owner",
+      });
+      await storage.createDogMember(dogMemberData);
+
       res.json(dog);
     } catch (error) {
       console.error("Error creating dog:", error, "Type:", typeof error, JSON.stringify(error));

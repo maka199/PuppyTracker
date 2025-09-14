@@ -1,3 +1,14 @@
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const text = encodeURIComponent(`Gå med i vår hundprofil! Använd koden: ${dogProfile.inviteCode}`);
+                    const url = `https://wa.me/?text=${text}`;
+                    window.open(url, '_blank');
+                  }}
+                >
+                  Dela via WhatsApp
+                </Button>
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -5,6 +16,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +25,8 @@ import BottomNav from "@/components/bottom-nav";
 import type { Dog, InsertDog } from "@shared/schema";
 
 export default function Profile() {
+  const [joinCode, setJoinCode] = useState("");
+  const [joinStatus, setJoinStatus] = useState<string | null>(null);
   const { user, isLoading: userLoading } = useAuth();
   const { logout } = useAuthContext();
   const { toast } = useToast();
@@ -47,6 +61,26 @@ export default function Profile() {
   }, [dogProfile]);
 
   // Save dog profile mutation
+  // Join dog profile mutation
+  const joinDogProfile = async () => {
+    setJoinStatus(null);
+    if (!joinCode.trim()) {
+      setJoinStatus("Ange en kod.");
+      return;
+    }
+    try {
+      const response = await apiRequest("POST", "/api/dogs/join", { inviteCode: joinCode.trim() });
+      if (response.ok) {
+        setJoinStatus("Du är nu medlem i hundprofilen!");
+        queryClient.invalidateQueries({ queryKey: ["/api/dogs/profile"] });
+      } else {
+        const data = await response.json();
+        setJoinStatus(data.message || "Misslyckades att ansluta.");
+      }
+    } catch (e) {
+      setJoinStatus("Misslyckades att ansluta.");
+    }
+  };
   const saveDogMutation = useMutation({
     mutationFn: async () => {
       const dogData: InsertDog = {
@@ -176,7 +210,7 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        {/* Dog Profile Card */}
+        {/* Dog Profile Card + Invite/Join UI */}
         <Card className="bg-white rounded-3xl shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-6">
@@ -193,6 +227,61 @@ export default function Profile() {
               ) : null}
             </div>
 
+            {/* Visa inviteCode */}
+            {dogProfile?.inviteCode && !isEditing && (
+              <div className="mb-4 flex items-center gap-2">
+                <span className="font-mono bg-gray-100 px-3 py-1 rounded text-lg tracking-widest select-all">{dogProfile.inviteCode}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(dogProfile.inviteCode!);
+                    toast({ title: "Kopierat!", description: "Inbjudningskoden är kopierad." });
+                  }}
+                >
+                  Kopiera kod
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const url = `mailto:?subject=Gå med i vår hundprofil!&body=Använd koden: ${dogProfile.inviteCode}`;
+                    window.open(url, '_blank');
+                  }}
+                >
+                  Dela via e-post
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const sms = `sms:?body=Gå med i vår hundprofil! Använd koden: ${dogProfile.inviteCode}`;
+                    window.open(sms, '_blank');
+                  }}
+                >
+                  Dela via SMS
+                </Button>
+              </div>
+            )}
+
+            {/* Visa anslutningsformulär */}
+            {!dogProfile && !isEditing && (
+              <div className="mb-6">
+                <h4 className="font-semibold text-gray-800 mb-2">Anslut till en hundprofil</h4>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ange kod..."
+                    value={joinCode}
+                    onChange={e => setJoinCode(e.target.value)}
+                    className="rounded-xl"
+                  />
+                  <Button onClick={joinDogProfile} className="rounded-xl bg-pet-green text-white">Anslut</Button>
+                </div>
+                {joinStatus && <div className="text-sm mt-2 text-gray-600">{joinStatus}</div>}
+              </div>
+            )}
+
+            {/* Resten av dog profile UI (oförändrat) */}
             {!isEditing ? (
               <div className="space-y-4">
                 <div className="flex items-center space-x-4">
@@ -236,7 +325,9 @@ export default function Profile() {
                 )}
               </div>
             ) : (
+              // ...existing code for edit mode...
               <div className="space-y-4">
+                {/* ...existing edit form... */}
                 <div>
                   <Label htmlFor="dog-photo" className="text-sm font-medium text-gray-700 mb-2 block">
                     Dog Photo (Optional)

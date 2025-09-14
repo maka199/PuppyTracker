@@ -1,23 +1,29 @@
-import {
-  users,
-  walks,
-  walkEvents,
-  feedings,
-  dogs,
-  type User,
-  type UpsertUser,
-  type Walk,
-  type InsertWalk,
-  type WalkEvent,
-  type InsertWalkEvent,
-  type Feeding,
-  type InsertFeeding,
-  type Dog,
-  type InsertDog,
-  type WalkWithEvents,
-  type FeedingWithUser,
-  type ActivityItem,
-} from "@shared/schema";
+  import {
+    users,
+    walks,
+    walkEvents,
+    feedings,
+    dogs,
+    dogMembers,
+  } from "@shared/schema";
+
+  import type {
+    User,
+    UpsertUser,
+    Walk,
+    InsertWalk,
+    WalkEvent,
+    InsertWalkEvent,
+    Feeding,
+    InsertFeeding,
+    Dog,
+    InsertDog,
+    WalkWithEvents,
+    FeedingWithUser,
+    ActivityItem,
+    InsertDogMember,
+    DogMember,
+  } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 
@@ -54,6 +60,11 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Dog member operations
+  async createDogMember(dogMember: InsertDogMember): Promise<DogMember> {
+    const [member] = await db.insert(dogMembers).values(dogMember).returning();
+    return member;
+  }
   async updateFeeding(id: string, updates: Partial<Feeding>): Promise<Feeding> {
     if (updates.timestamp) {
       updates.timestamp = new Date(updates.timestamp);
@@ -344,10 +355,25 @@ export class DatabaseStorage implements IStorage {
   
   // Dog operations
   async createDog(dogData: InsertDog): Promise<Dog> {
+    // Generera en unik kod (6 tecken, a-zA-Z0-9)
+    let inviteCode = dogData.inviteCode;
+    if (!inviteCode) {
+      let unique = false;
+      while (!unique) {
+        inviteCode = crypto.randomBytes(4).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6);
+        const existing = await db.select().from(dogs).where(eq(dogs.inviteCode, inviteCode));
+        if (existing.length === 0) unique = true;
+      }
+    }
     const [dog] = await db
       .insert(dogs)
-      .values(dogData)
+      .values({ ...dogData, inviteCode })
       .returning();
+    return dog;
+  }
+
+  async getDogByInviteCode(inviteCode: string): Promise<Dog | undefined> {
+    const [dog] = await db.select().from(dogs).where(eq(dogs.inviteCode, inviteCode));
     return dog;
   }
 
