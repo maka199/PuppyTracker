@@ -1,5 +1,89 @@
+
+
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupSimpleAuth, validateUsername } from "./simpleAuth";
+import { insertWalkSchema, insertWalkEventSchema, insertFeedingSchema, insertDogSchema, insertDogMemberSchema } from "@shared/schema";
+import { z } from "zod";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Ensure uploads directory exists (ESM fix)
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const uploadsDir = path.join(__dirname, "../uploads/");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+  }
+  // Set up multer for file uploads
+  const upload = multer({
+    dest: uploadsDir,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  });
+
+  // ...befintlig kod...
+
+  app.post('/api/dogs', validateUsername, async (req: any, res) => {
+    try {
+      const username = req.user.username;
+      // Ensure user exists in DB before creating dog
+      await storage.upsertUser({
+        id: username,
+        email: `${username}@local`,
+        firstName: username,
+        lastName: null,
+        profileImageUrl: null,
+      });
+      const dogData = insertDogSchema.parse({
+        ...req.body,
+        userId: username, // Use username as skapare
+      });
+      const dog = await storage.createDog(dogData);
+
+      // Lägg till skaparen som "owner" i dogMembers
+      const dogMemberData = insertDogMemberSchema.parse({
+        dogId: dog.id,
+        userId: username,
+        role: "owner",
+      });
+      await storage.createDogMember(dogMemberData);
+
+      res.json(dog);
+    } catch (error) {
+      console.error("Error creating dog:", error, "Type:", typeof error, JSON.stringify(error));
+      res.status(400).json({ message: `Failed to create dog: ${JSON.stringify(error)}` });
+    }
+  });
+
+  app.put('/api/dogs/:id', validateUsername, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      // Verify the dog belongs to the current user
+      const existingDog = await storage.getDog(id);
+      if (!existingDog) {
+        return res.status(404).json({ message: "Dog not found" });
+      }
+      const username = req.user.username;
+      if (existingDog.userId !== username) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      console.log("[PUT /api/dogs/:id] id:", id, "updates:", updates);
+      const dog = await storage.updateDog(id, updates);
+      console.log("[PUT /api/dogs/:id] updated dog:", dog);
+      res.json(dog);
+    } catch (error) {
+      console.error("Error updating dog:", error);
+      res.status(400).json({ message: "Failed to update dog" });
+    }
+  });
+
   // Anslut till hundprofil
-  app.post('/api/dogs/join', validateUsername, async (req: any, res) => {
+  app.post('/api/dogs/join', validateUsername, async (req: any, res: any) => {
     try {
       const username = req.user.username;
       const { dogId, inviteCode } = req.body;
@@ -29,83 +113,8 @@
       res.status(400).json({ message: 'Misslyckades att ansluta till hundprofil.' });
     }
   });
-import multer from "multer";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
-import type { Express } from "express";
-import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { setupSimpleAuth, validateUsername } from "./simpleAuth";
-import { insertWalkSchema, insertWalkEventSchema, insertFeedingSchema, insertDogSchema, insertDogMemberSchema } from "@shared/schema";
-import { z } from "zod";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Ensure uploads directory exists (ESM fix)
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const uploadsDir = path.join(__dirname, "../uploads/");
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
-  }
-  // Set up multer for file uploads
-  const upload = multer({
-    dest: uploadsDir,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  });
-  // File upload endpoint
-  app.post("/api/upload", upload.single("file"), (req: any, res: any) => {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-    const fileUrl = `/uploads/${req.file.filename}`;
-    res.status(200).json({ url: fileUrl });
-  });
-  // Simple auth setup
-  await setupSimpleAuth(app);
 
-  // User info route - returns the username for simple auth
-  app.get('/api/auth/user', validateUsername, async (req: any, res) => {
-    try {
-      const username = req.user.username;
-      // Return a simplified user object with username as the main identifier
-      res.json({
-        id: username, // Use username as ID for backwards compatibility  
-        firstName: username,
-        email: `${username}@local`, // Placeholder email for compatibility
-        username: username
-      });
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  // Walk routes
-  app.post('/api/walks', validateUsername, async (req: any, res) => {
-    try {
-      const username = req.user.username;
-      const walkData = insertWalkSchema.parse({
-        ...req.body,
-        userId: username, // Use username as userId
-        startTime: new Date(),
-      });
-      
-      // Ensure user exists in DB before creating walk
-      await storage.upsertUser({
-        id: username,
-        email: `${username}@local`,
-        firstName: username,
-        lastName: null,
-        profileImageUrl: null,
-      });
-      const walk = await storage.createWalk(walkData);
-      res.json(walk);
-    } catch (error) {
-      console.error("Error creating walk:", error);
-      res.status(400).json({ message: "Failed to create walk" });
-    }
-  });
 
   app.put('/api/walks/:id', validateUsername, async (req: any, res) => {
     try {

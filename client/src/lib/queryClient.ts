@@ -27,7 +27,15 @@ export async function apiRequest(
     headers['Content-Type'] = 'application/json';
   }
 
-  const apiBase = 'https://puppytracker.onrender.com';
+  // Använd devtunnel om vi kör lokalt eller om window.location matchar devtunnel
+  let apiBase = 'https://puppytracker.onrender.com';
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')) {
+      apiBase = 'https://z454b810-5000.euw.devtunnels.ms';
+    } else if (window.location.hostname.endsWith('.devtunnels.ms')) {
+      apiBase = window.location.origin;
+    }
+  }
   const fullUrl = url.startsWith('/api') ? apiBase + url : url;
   const res = await fetch(fullUrl, {
     method,

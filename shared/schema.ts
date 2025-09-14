@@ -36,8 +36,9 @@ export const users = pgTable("users", {
 });
 
 // Dog profiles table
+export const dogs = pgTable("dogs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id), // Skapare av profilen,
+  userId: varchar("user_id").references(() => users.id), // Skapare av profilen
   name: varchar("name").notNull().default("Buddy"),
   breed: varchar("breed").default("Golden Retriever"),
   photoUrl: varchar("photo_url"),

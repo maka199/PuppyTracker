@@ -26,6 +26,7 @@
   } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
+import crypto from "node:crypto";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -356,13 +357,16 @@ export class DatabaseStorage implements IStorage {
   // Dog operations
   async createDog(dogData: InsertDog): Promise<Dog> {
     // Generera en unik kod (6 tecken, a-zA-Z0-9)
-    let inviteCode = dogData.inviteCode;
+    let inviteCode = dogData.inviteCode ?? undefined;
     if (!inviteCode) {
       let unique = false;
       while (!unique) {
-        inviteCode = crypto.randomBytes(4).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6);
-        const existing = await db.select().from(dogs).where(eq(dogs.inviteCode, inviteCode));
-        if (existing.length === 0) unique = true;
+        const candidate = crypto.randomBytes(4).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6);
+        const existing = await db.select().from(dogs).where(eq(dogs.inviteCode, candidate));
+        if (existing.length === 0) {
+          inviteCode = candidate;
+          unique = true;
+        }
       }
     }
     const [dog] = await db

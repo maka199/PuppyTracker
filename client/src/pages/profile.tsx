@@ -1,27 +1,35 @@
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const text = encodeURIComponent(`Gå med i vår hundprofil! Använd koden: ${dogProfile.inviteCode}`);
-                    const url = `https://wa.me/?text=${text}`;
-                    window.open(url, '_blank');
-                  }}
-                >
-                  Dela via WhatsApp
-                </Button>
+// ...imports...
+
+export default function Profile() {
+  // ...befintlig kod...
+
+  // ...efter dogProfile deklarerats och laddats...
+  // Exempel: Lägg in denna knapp i din JSX där du vill visa delningsknappen:
+  // {dogProfile && (
+  //   <Button
+  //     size="sm"
+  //     variant="outline"
+  //     onClick={() => {
+  //       const text = encodeURIComponent(`Gå med i vår hundprofil! Använd koden: ${dogProfile.inviteCode}`);
+  //       const url = `https://wa.me/?text=${text}`;
+  //       window.open(url, '_blank');
+  //     }}
+  //   >
+  //     Dela via WhatsApp
+  //   </Button>
+  // )}
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { useAuthContext } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import BottomNav from "@/components/bottom-nav";
+import { useAuth } from "../hooks/useAuth";
+import { useAuthContext } from "../contexts/AuthContext";
+import { useToast } from "../hooks/use-toast";
+import { apiRequest, queryClient } from "../lib/queryClient";
+import { Button } from "../components/ui/button";
+import { Card, CardContent } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea";
+import BottomNav from "../components/bottom-nav";
 import type { Dog, InsertDog } from "@shared/schema";
 
 export default function Profile() {
@@ -107,11 +115,7 @@ export default function Profile() {
       setIsEditing(false);
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to save dog profile",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to save dog profile", variant: "destructive" });
     },
   });
 
