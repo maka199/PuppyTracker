@@ -13,8 +13,6 @@ import BottomNav from "@/components/bottom-nav";
 import type { Dog, InsertDog } from "@shared/schema";
 
 export default function Profile() {
-  const [joinCode, setJoinCode] = useState("");
-  const [joinStatus, setJoinStatus] = useState<string | null>(null);
   const { user, isLoading: userLoading } = useAuth();
   const { logout } = useAuthContext();
   const { toast } = useToast();
@@ -49,36 +47,10 @@ export default function Profile() {
   }, [dogProfile]);
 
   // Save dog profile mutation
-  // Join dog profile mutation
-  const joinDogProfile = async () => {
-    setJoinStatus(null);
-    if (!joinCode.trim()) {
-      setJoinStatus("Ange en kod.");
-      return;
-    }
-    try {
-      const response = await apiRequest("POST", "/api/dogs/join", { inviteCode: joinCode.trim() });
-      if (response.ok) {
-        setJoinStatus("Du är nu medlem i hundprofilen!");
-        queryClient.invalidateQueries({ queryKey: ["/api/dogs/profile"] });
-      } else {
-        const data = await response.json();
-        setJoinStatus(data.message || "Misslyckades att ansluta.");
-      }
-    } catch (e) {
-      setJoinStatus("Misslyckades att ansluta.");
-    }
-  };
   const saveDogMutation = useMutation({
     mutationFn: async () => {
-      // För felsökning: logga user och userId
-      console.log('Saving dog profile, user:', user);
-  const userId = user?.id || user?.username || '';
-      if (!userId) {
-        throw new Error('Ingen giltig användar-id vid lagring av hundprofil');
-      }
       const dogData: InsertDog = {
-        userId,
+        userId: (user as any).id,
         name: dogName.trim(),
         breed: dogBreed.trim(),
         photoUrl: dogPhotoUrl.trim() || undefined,
@@ -100,8 +72,12 @@ export default function Profile() {
       });
       setIsEditing(false);
     },
-  onError: (error: unknown) => {
-      toast({ title: "Error", description: "Failed to save dog profile", variant: "destructive" });
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to save dog profile",
+        variant: "destructive",
+      });
     },
   });
 
@@ -200,7 +176,7 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        {/* Dog Profile Card + Invite/Join UI */}
+        {/* Dog Profile Card */}
         <Card className="bg-white rounded-3xl shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-6">
@@ -217,61 +193,6 @@ export default function Profile() {
               ) : null}
             </div>
 
-            {/* Visa inviteCode */}
-            {dogProfile?.inviteCode && !isEditing && (
-              <div className="mb-4 flex items-center gap-2">
-                <span className="font-mono bg-gray-100 px-3 py-1 rounded text-lg tracking-widest select-all">{dogProfile.inviteCode}</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(dogProfile.inviteCode!);
-                    toast({ title: "Kopierat!", description: "Inbjudningskoden är kopierad." });
-                  }}
-                >
-                  Kopiera kod
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const url = `mailto:?subject=Gå med i vår hundprofil!&body=Använd koden: ${dogProfile.inviteCode}`;
-                    window.open(url, '_blank');
-                  }}
-                >
-                  Dela via e-post
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const sms = `sms:?body=Gå med i vår hundprofil! Använd koden: ${dogProfile.inviteCode}`;
-                    window.open(sms, '_blank');
-                  }}
-                >
-                  Dela via SMS
-                </Button>
-              </div>
-            )}
-
-            {/* Visa anslutningsformulär */}
-            {!dogProfile && !isEditing && (
-              <div className="mb-6">
-                <h4 className="font-semibold text-gray-800 mb-2">Anslut till en hundprofil</h4>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Ange kod..."
-                    value={joinCode}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setJoinCode(e.target.value)}
-                    className="rounded-xl"
-                  />
-                  <Button onClick={joinDogProfile} className="rounded-xl bg-pet-green text-white">Anslut</Button>
-                </div>
-                {joinStatus && <div className="text-sm mt-2 text-gray-600">{joinStatus}</div>}
-              </div>
-            )}
-
-            {/* Resten av dog profile UI (oförändrat) */}
             {!isEditing ? (
               <div className="space-y-4">
                 <div className="flex items-center space-x-4">
@@ -315,9 +236,7 @@ export default function Profile() {
                 )}
               </div>
             ) : (
-              // ...existing code for edit mode...
               <div className="space-y-4">
-                {/* ...existing edit form... */}
                 <div>
                   <Label htmlFor="dog-photo" className="text-sm font-medium text-gray-700 mb-2 block">
                     Dog Photo (Optional)
@@ -327,7 +246,7 @@ export default function Profile() {
                       id="dog-photo"
                       type="url"
                       value={dogPhotoUrl}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDogPhotoUrl(e.target.value)}
+                      onChange={(e) => setDogPhotoUrl(e.target.value)}
                       placeholder="https://example.com/your-dog-photo.jpg"
                       className="w-full rounded-xl border-gray-300"
                       data-testid="input-dog-photo"
@@ -343,10 +262,10 @@ export default function Profile() {
                         const formData = new FormData();
                         formData.append('file', file);
                         try {
-                            const res = await fetch('https://puppytracker.onrender.com/api/upload', {
-                              method: 'POST',
-                              body: formData,
-                            });
+                          const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            body: formData,
+                          });
                           const data = await res.json();
                           if (data.url) setDogPhotoUrl(data.url);
                           else alert('Upload failed');
@@ -376,7 +295,7 @@ export default function Profile() {
                     id="dog-name"
                     type="text"
                     value={dogName}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDogName(e.target.value)}
+                    onChange={(e) => setDogName(e.target.value)}
                     placeholder="Enter your dog's name"
                     className="w-full rounded-xl border-gray-300"
                     data-testid="input-dog-name"
@@ -391,7 +310,7 @@ export default function Profile() {
                     id="dog-breed"
                     type="text"
                     value={dogBreed}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDogBreed(e.target.value)}
+                    onChange={(e) => setDogBreed(e.target.value)}
                     placeholder="e.g., Golden Retriever, Mixed"
                     className="w-full rounded-xl border-gray-300"
                     data-testid="input-dog-breed"
@@ -406,7 +325,7 @@ export default function Profile() {
                     id="dog-weight"
                     type="number"
                     value={dogWeight}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDogWeight(e.target.value)}
+                    onChange={(e) => setDogWeight(e.target.value)}
                     placeholder="Weight in pounds"
                     className="w-full rounded-xl border-gray-300"
                     data-testid="input-dog-weight"

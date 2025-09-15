@@ -27,13 +27,17 @@ export async function apiRequest(
     headers['Content-Type'] = 'application/json';
   }
 
-  // Använd devtunnel om vi kör lokalt eller om window.location matchar devtunnel
-  let apiBase = 'https://puppytracker.onrender.com';
-  if (typeof window !== 'undefined') {
-    if (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')) {
-      apiBase = 'https://z454b810-5000.euw.devtunnels.ms';
-    } else if (window.location.hostname.endsWith('.devtunnels.ms')) {
-      apiBase = window.location.origin;
+  // Använd miljövariabel om den finns, annars fallback
+  let apiBase = import.meta.env.VITE_API_URL || '';
+  if (!apiBase) {
+    if (typeof window !== 'undefined') {
+      if (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')) {
+        apiBase = 'http://localhost:5000';
+      } else {
+        apiBase = 'https://puppytracker.onrender.com';
+      }
+    } else {
+      apiBase = 'https://puppytracker.onrender.com';
     }
   }
   const fullUrl = url.startsWith('/api') ? apiBase + url : url;
