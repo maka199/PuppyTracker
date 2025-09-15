@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import React, { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,7 +15,11 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
-
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated && window.location.pathname !== "/") {
+      window.location.href = "/";
+    }
+  }, [isAuthenticated, isLoading]);
   return (
     <Switch>
       {isLoading || !isAuthenticated ? (
@@ -44,5 +49,11 @@ function App() {
     </QueryClientProvider>
   );
 }
+  const { isAuthenticated } = useAuthContext();
+  useEffect(() => {
+    if (!isAuthenticated && window.location.pathname !== "/") {
+      window.location.href = "/";
+    }
+  }, [isAuthenticated]);
 
 export default App;

@@ -59,7 +59,11 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const username = getUsernameFromLocalStorage();
-    const headers: Record<string, string> = {};
+  if (res.status === 401) {
+    alert("Du är utloggad eller saknar behörighet. Logga in igen.");
+    window.location.href = "/";
+    throw new Error("401 Unauthorized");
+  }
     
     if (username) {
       headers['x-username'] = username;

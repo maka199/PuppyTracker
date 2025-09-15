@@ -4,9 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuthContext } from "@/contexts/AuthContext";
 
-export default function Landing() {
   const [username, setUsername] = useState("");
-  const { login } = useAuthContext();
+  const { login, logout, username: currentUser } = useAuthContext();
 
   const handleLogin = () => {
     if (username.trim()) {
@@ -24,6 +23,12 @@ export default function Landing() {
     <div className="min-h-screen bg-gradient-to-br from-pet-green to-pet-blue flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-white rounded-3xl shadow-xl">
         <CardContent className="p-8">
+          {currentUser && (
+            <div className="mb-6 text-center">
+              <p className="mb-2 text-gray-700">Inloggad som <b>{currentUser}</b></p>
+              <Button variant="outline" onClick={logout} className="mb-2">Logga ut / Byt användare</Button>
+            </div>
+          )}
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-pet-orange rounded-full flex items-center justify-center mx-auto mb-4">
               <i className="fas fa-paw text-white text-3xl"></i>
