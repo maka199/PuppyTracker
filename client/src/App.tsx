@@ -49,11 +49,4 @@ function App() {
     </QueryClientProvider>
   );
 }
-  const { isAuthenticated } = useAuthContext();
-  useEffect(() => {
-    if (!isAuthenticated && window.location.pathname !== "/") {
-      window.location.href = "/";
-    }
-  }, [isAuthenticated]);
-
 export default App;

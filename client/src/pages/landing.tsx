@@ -4,12 +4,51 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuthContext } from "@/contexts/AuthContext";
 
+export default function Landing() {
   const [username, setUsername] = useState("");
   const { login, logout, username: currentUser } = useAuthContext();
 
-  const handleLogin = () => {
-    if (username.trim()) {
-      login(username.trim());
+  const handleLogin = async () => {
+    const trimmed = username.trim();
+    if (!trimmed) return;
+    try {
+      const apiBase = window.location.hostname.includes('localhost') ? 'http://localhost:5000' : 'https://puppytracker.onrender.com';
+      const url = `${apiBase}/api/users/${encodeURIComponent(trimmed)}`;
+      console.log('Kontrollerar användare mot:', url);
+      const res = await fetch(url);
+      if (res.ok) {
+        // Användaren finns, logga in direkt
+        login(trimmed);
+        return;
+      }
+      if (res.status === 404) {
+        // Användaren finns inte, fråga om man vill skapa
+        const confirmCreate = window.confirm(`Användaren '${trimmed}' finns inte. Vill du skapa en ny användare?`);
+        if (confirmCreate) {
+          // Skapa användare i databasen
+          const createUrl = `${apiBase}/api/users`;
+          console.log('Skapar användare via:', createUrl);
+          const createRes = await fetch(createUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: trimmed })
+          });
+          if (createRes.ok) {
+            login(trimmed);
+          } else {
+            const errText = await createRes.text();
+            alert('Kunde inte skapa användare. ' + errText);
+            console.error('Fel vid skapande:', errText);
+          }
+        }
+        return;
+      }
+  const errText = await res.text();
+  alert('Kunde inte kontrollera användare. Försök igen. ' + errText);
+  console.error('Fel vid kontroll:', errText);
+    } catch (err) {
+      alert('Nätverksfel vid kontroll av användare.');
+      console.error('Nätverksfel:', err);
     }
   };
 

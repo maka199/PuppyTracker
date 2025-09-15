@@ -59,23 +59,24 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const username = getUsernameFromLocalStorage();
-  if (res.status === 401) {
-    alert("Du är utloggad eller saknar behörighet. Logga in igen.");
-    window.location.href = "/";
-    throw new Error("401 Unauthorized");
-  }
-    
+    const headers: Record<string, string> = {};
     if (username) {
       headers['x-username'] = username;
     }
 
-  const apiBase = 'https://puppytracker.onrender.com';
-  const url = queryKey[0];
-  const fullUrl = typeof url === 'string' && url.startsWith('/api') ? apiBase + url : String(url);
-  const res = await fetch(fullUrl, {
+    const apiBase = 'https://puppytracker.onrender.com';
+    const url = queryKey[0];
+    const fullUrl = typeof url === 'string' && url.startsWith('/api') ? apiBase + url : String(url);
+    const res = await fetch(fullUrl, {
       headers,
       credentials: "include",
     });
+
+    if (res.status === 401) {
+      alert("Du är utloggad eller saknar behörighet. Logga in igen.");
+      window.location.href = "/";
+      throw new Error("401 Unauthorized");
+    }
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;

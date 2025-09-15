@@ -10,6 +10,41 @@ import { insertWalkSchema, insertWalkEventSchema, insertFeedingSchema, insertDog
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Skapa ny användare
+  app.post('/api/users', async (req, res) => {
+    try {
+      const { id } = req.body;
+      if (!id || typeof id !== 'string' || id.trim().length === 0) {
+        return res.status(400).json({ error: 'Username required' });
+      }
+      // Skapa användare om den inte finns
+      const user = await storage.getUser(id.trim());
+      if (user) {
+        return res.status(409).json({ error: 'User already exists' });
+      }
+      const newUser = await storage.upsertUser({ id: id.trim() });
+      return res.status(201).json({ user: newUser });
+    } catch (err) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  // Kontrollera om användare finns
+  app.get('/api/users/:username', async (req, res) => {
+    try {
+      const username = req.params.username;
+      if (!username || typeof username !== 'string' || username.trim().length === 0) {
+        return res.status(400).json({ error: 'Username required' });
+      }
+      const user = await storage.getUser(username.trim());
+      if (user) {
+        return res.status(200).json({ exists: true });
+      } else {
+        return res.status(404).json({ exists: false });
+      }
+    } catch (err) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
   // Ensure uploads directory exists (ESM fix)
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
